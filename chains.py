@@ -1,7 +1,8 @@
 # chains.py
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from models import CodeReviewResult
+from prompts import FEW_SHOT_EXAMPLES
 
 # ==========================
 # 4.14 周二：LLMChain 提示词
@@ -20,22 +21,19 @@ prompt_template = PromptTemplate(
 # ==========================
 parser = PydanticOutputParser(pydantic_object=CodeReviewResult)
 
-review_prompt = PromptTemplate(
-    input_variables=["code"],
-    template="""
-你是专业的 Unity C# 代码审查助手。
-请审查以下代码，并严格按照 JSON 格式输出审查结果。
+# =====================================================
+# 5.6 修改：从 PromptTemplate 改为 ChatPromptTemplate
+# =====================================================
+review_chat_prompt = ChatPromptTemplate.from_messages([
+    ("system", FEW_SHOT_EXAMPLES),
+    ("user", "{code}")
+])
 
-待审查代码：
-{code}
-
-{format_instructions}
-
-只输出 JSON，不要添加任何额外说明或 Markdown 代码块标记。
-""",
-    partial_variables={"format_instructions": parser.get_format_instructions()}
+# 预填入 format_instructions，使其在系统消息中生效
+review_chat_prompt = review_chat_prompt.partial(
+    format_instructions=parser.get_format_instructions()
 )
 
 def get_review_chain(llm):
     """返回结构化审查链"""
-    return review_prompt | llm | parser
+    return review_chat_prompt | llm | parser

@@ -12,9 +12,10 @@ from langchain_openai import ChatOpenAI
 
 from config import config
 from models import ChatRequest, ChainRequest, CodeReviewRequest, SafeReviewRequest
-from chains import prompt_template, get_review_chain, review_prompt, parser
+from chains import prompt_template, get_review_chain, review_chat_prompt, parser
 from agent_graph import get_agent_graph
 from agent_api import register_agent_routes
+from prompts import REVIEW_SYSTEM_PROMPT
 
 # 日志配置
 logging.basicConfig(
@@ -101,7 +102,7 @@ async def review_code(request: CodeReviewRequest):
 async def safe_review_code(request: SafeReviewRequest):
     logger.info(f"收到审查请求，代码长度: {len(request.code)}")
     try:
-        raw_result = await (review_prompt | llm).ainvoke({"code": request.code})
+        raw_result = await (review_chat_prompt | llm).ainvoke({"code": request.code})
         raw_text = raw_result.content if hasattr(raw_result, "content") else str(raw_result)
         logger.info(f"LLM 返回原始输出，长度: {len(raw_text)}")
         # 延迟导入 safe_parse_with_retry 避免循环
@@ -114,7 +115,7 @@ async def safe_review_code(request: SafeReviewRequest):
         raise HTTPException(status_code=500, detail={"error": "服务内部错误", "message": str(e)})
 
 # 注册 Agent 相关路由
-register_agent_routes(app, llm, agent_graph, review_chain, review_prompt, parser)
+register_agent_routes(app, llm, agent_graph, review_chain, review_chat_prompt, parser)
 
 # 全局异常处理器（与源文件一致）
 from fastapi import HTTPException

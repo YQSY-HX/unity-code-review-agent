@@ -10,6 +10,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.exceptions import OutputParserException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage
+# 导入基础提示词
+from prompts import REVIEW_SYSTEM_PROMPT
+from chains import review_chat_prompt
 
 
 from models import (
@@ -150,20 +153,12 @@ def add_message_to_session(session_id:str,message):
 # ==========================
 # 注册 Agent 相关路由
 # ==========================
-def register_agent_routes(app, llm, agent_graph, review_chain, review_prompt, parser):
+def register_agent_routes(app, llm, agent_graph, review_chain, review_chat_prompt, parser):
     """将 Agent 相关接口注册到 FastAPI app 上"""
 
     @app.post("/agent")
     async def run_agent(request: AgentRequest):
-        system_prompt = SystemMessage(content="""
-            你是专业的 Unity C# 代码审查助手。
-            你只会做：
-            1. 代码规范检查
-            2. 性能问题检查
-            3. 面向对象设计建议
-            4. 给出可直接使用的优化代码
-            回答必须简洁、专业。
-        """)
+        system_prompt = SystemMessage(content=REVIEW_SYSTEM_PROMPT)
         result = await agent_graph.ainvoke({
             "messages": [system_prompt, HumanMessage(content=request.input)]
         })
@@ -181,15 +176,7 @@ def register_agent_routes(app, llm, agent_graph, review_chain, review_prompt, pa
                 tool_calls_made=[],
                 thinking_chain=[{"type": "IntentFilter", "result": "rejected"}]
             ).model_dump()
-        system_prompt = SystemMessage(content="""
-            你是专业的 Unity C# 代码审查助手。
-            你只会做：
-            1. 代码规范检查
-            2. 性能问题检查
-            3. 面向对象设计建议
-            4. 给出可直接使用的优化代码
-            回答必须简洁、专业。
-        """)
+        system_prompt = SystemMessage(content=REVIEW_SYSTEM_PROMPT)
         result = await agent_graph.ainvoke({
             "messages": [system_prompt, HumanMessage(content=request.input)]
         })
@@ -225,15 +212,7 @@ def register_agent_routes(app, llm, agent_graph, review_chain, review_prompt, pa
             ).model_dump()
         logger.info("意图分类：代码相关，进入 Agent 流程")
         try:
-            system_prompt = SystemMessage(content="""
-                你是专业的 Unity C# 代码审查助手。
-                你只会做：
-                1. 代码规范检查
-                2. 性能问题检查
-                3. 面向对象设计建议
-                4. 给出可直接使用的优化代码
-                回答必须简洁、专业。
-            """)
+            system_prompt = SystemMessage(content=REVIEW_SYSTEM_PROMPT)
             logger.info("开始执行 Agent 图...")
             result = await agent_graph.ainvoke({
                 "messages": [system_prompt, HumanMessage(content=request.input)]
@@ -245,7 +224,7 @@ def register_agent_routes(app, llm, agent_graph, review_chain, review_prompt, pa
             review_result = None
             try:
                 logger.info("开始调用结构化审查链...")
-                raw_review = await (review_prompt | llm).ainvoke({"code": request.input})
+                raw_review = await (review_chat_prompt | llm).ainvoke({"code": request.input})
                 raw_text = raw_review.content if hasattr(raw_review, "content") else str(raw_review)
                 review_result = await safe_parse_with_retry(
                     raw_output=raw_text,
@@ -299,7 +278,7 @@ def register_agent_routes(app, llm, agent_graph, review_chain, review_prompt, pa
             ).model_dump()
 
         # 构建消息列表
-        messages = [SystemMessage(content="你是专业的 Unity C# 代码审查助手，回答必须简洁、专业。")]
+        messages = [SystemMessage(content=REVIEW_SYSTEM_PROMPT)]
         messages.extend(history)
         messages.append(HumanMessage(content=request.input))
 
@@ -370,7 +349,7 @@ def register_agent_routes(app, llm, agent_graph, review_chain, review_prompt, pa
     async def agent_with_memory_stream(request: AgentMemoryRequest):
         """带对话记忆的流式 Agent 接口"""
         history = get_session_history(request.session_id)
-        messages = [SystemMessage(content="你是专业的 Unity C# 代码审查助手，回答必须简洁、专业。")]
+        messages = [SystemMessage(content=REVIEW_SYSTEM_PROMPT)]
         messages.extend(history)
         messages.append(HumanMessage(content=request.input))
 
