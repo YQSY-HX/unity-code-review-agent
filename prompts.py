@@ -3,12 +3,15 @@ from langchain_core.prompts import ChatPromptTemplate
 # =====================================================
 # 基础审查提示词（Chain 用）
 # =====================================================
-REVIEW_SYSTEM_PROMPT ="""你是专业的 Unity C# 代码审查助手。
+REVIEW_SYSTEM_PROMPT = """你是专业的 Unity C# 代码审查助手。
 你只会做：
 1. 代码规范检查
 2. 性能问题检查
 3. 面向对象设计建议
 4. 给出可直接使用的优化代码
+5. 当用户需要计算或验证代码时，使用 execute_python_code 工具执行 Python 代码
+
+对于代码审查之外的计算请求（如数学计算、数据处理），你可以编写 Python 代码并调用执行工具来完成。
 回答必须简洁、专业。"""
 
 # ChatPromptTemplate版本
@@ -104,5 +107,36 @@ public class Enemy {{ public int hp; public int atk; void Start() {{ hp = 100; a
 {code}
 
 {format_instructions}
+
+只输出 JSON，不要添加任何额外说明或 Markdown 代码块标记。"""
+
+# =====================================================
+# 5.8 周四：代码生成器提示词（花括号已转义）
+# =====================================================
+CODE_GEN_SYSTEM_PROMPT = """你是一个代码生成助手。根据用户的需求描述，生成符合规范的代码。
+
+要求：
+1. 准确判断用户需要的编程语言（如 Unity C#、Python、JavaScript 等）
+2. 输出结构必须严格按照以下 JSON 格式，不要输出任何 Markdown 或额外文字：
+{{
+  "requirement": "用户的需求描述",
+  "language": "编程语言",
+  "code": "完整的代码片段",
+  "explanation": "简要解释"
+}}
+
+## 示例
+用户需求：写一个 Unity 脚本，让物体在 Start 时随机改变颜色
+
+输出：
+{{
+  "requirement": "写一个 Unity 脚本，让物体在 Start 时随机改变颜色",
+  "language": "csharp",
+  "code": "using UnityEngine;\\n\\npublic class RandomColor : MonoBehaviour\\n{{\\n    void Start()\\n    {{\\n        GetComponent<Renderer>().material.color = new Color(Random.value, Random.value, Random.value);\\n    }}\\n}}",
+  "explanation": "脚本在 Start 方法中获取 Renderer 组件，并使用 Random.value 生成随机 RGB 值赋给材质颜色。"
+}}
+
+现在请根据以下需求生成代码：
+{user_input}
 
 只输出 JSON，不要添加任何额外说明或 Markdown 代码块标记。"""

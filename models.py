@@ -1,5 +1,6 @@
 # models.py
 from typing import Optional, Any, List, Dict
+import langchain_openai
 from pydantic import BaseModel, Field
 
 # ==========================
@@ -77,3 +78,20 @@ class UnifiedResponse(BaseModel):
 class AgentMemoryRequest(BaseModel):
     input:str=Field(...,description="用户输入")
     session_id:str=Field(default="default",description="绘画id")
+
+# =====================================================
+# 5.8 周四：代码生成器请求模型
+# =====================================================
+class CodeGenRequest(BaseModel):
+    """代码生成请求"""
+    user_input: str = Field(..., description="用户的需求描述", min_length=1)
+
+# =====================================================
+# 5.8 周四：代码生成器输出模型
+# =====================================================
+class CodeGenResult(BaseModel):
+    """代码生成结果"""
+    requirement: str = Field(description="用户的需求描述")
+    language: str = Field(description="生成代码的语言，如 python、csharp、javascript 等")
+    code: str = Field(description="生成的代码片段，不包含 Markdown 代码块标记")
+    explanation: str = Field(description="对生成代码的简要解释，包括关键实现思路和注意事项")

@@ -17,6 +17,10 @@
         button { padding: 8px 16px; cursor: pointer; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 新增：highlight.js 核心库（预编译版，含常见语言支持） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <!-- 新增：主题样式（GitHub 风格） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
 </head>
 <body>
     <h1>Unity C# 代码审查 Agent</h1>
@@ -40,6 +44,9 @@
             div.className = "msg " + (role === "user" ? "user-msg" : "ai-msg");
             if (role === "ai") {
                 div.innerHTML = marked.parse(text);
+                div.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
             } else {
                 div.textContent = text;  // 用户消息保持纯文本，防 XSS
             }
@@ -150,6 +157,9 @@
                             } else if (data.type === "done") {
                                 // 流结束，用 Markdown 渲染最终结果
                                 div.innerHTML = marked.parse(data.content);
+                                div.querySelectorAll('pre code').forEach((block) => {
+                                    hljs.highlightElement(block);
+                                });
                             } else if (data.type === "error") {
                                 div.textContent = "❌ " + data.content;
                             }
@@ -161,6 +171,19 @@
                 div.textContent = "网络错误: " + err.message;
             }
         }
+
+
+        // 全局配置 marked，每次解析 Markdown 时自动调用 highlight.js
+        marked.use({
+            highlight: function(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'csharp';
+                return hljs.highlight(code, { language }).value;
+            },
+            langPrefix: 'hljs language-'
+        });
+
+        // 确保页面中已渲染的代码块被高亮
+        hljs.highlightAll();
         
     </script>
 </body>

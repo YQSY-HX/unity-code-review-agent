@@ -37,3 +37,31 @@ review_chat_prompt = review_chat_prompt.partial(
 def get_review_chain(llm):
     """返回结构化审查链"""
     return review_chat_prompt | llm | parser
+
+# =====================================================
+# 5.8 修改：从 PromptTemplate 改为 ChatPromptTemplate
+# =====================================================
+# 需要新增导入
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnableLambda
+from models import CodeGenResult
+from prompts import CODE_GEN_SYSTEM_PROMPT
+
+code_gen_parser = PydanticOutputParser(pydantic_object=CodeGenResult)
+
+code_gen_prompt = PromptTemplate(
+    input_variables=["user_input"],
+    template=CODE_GEN_SYSTEM_PROMPT
+)
+
+def fix_double_braces(ai_msg):
+    """将 LLM 输出中误生成的双花括号还原为单花括号"""
+    text = ai_msg.content
+    fixed = text.replace("{{", "{").replace("}}", "}")
+    ai_msg.content = fixed
+    return ai_msg
+
+def get_code_gen_chain(llm):
+    """返回代码生成链：Prompt → LLM → 清洗双花括号 → 解析"""
+    return code_gen_prompt | llm | RunnableLambda(fix_double_braces) | code_gen_parser

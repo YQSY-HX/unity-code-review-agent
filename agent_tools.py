@@ -1,6 +1,7 @@
 # agent_tools.py
 from datetime import datetime
 from langchain_core.tools import tool
+from code_executor import execute_python_code
 
 # ==========================
 # 4.16 周四：定义工具
@@ -26,4 +27,4 @@ def calculator(expression: str) -> str:
     except Exception as e:
         return f"计算出错: {e}"
 
-tools = [get_current_time, calculator]
+tools = [get_current_time, calculator, execute_python_code]

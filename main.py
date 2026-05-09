@@ -11,11 +11,14 @@ from starlette.responses import StreamingResponse
 from langchain_openai import ChatOpenAI
 
 from config import config
-from models import ChatRequest, ChainRequest, CodeReviewRequest, SafeReviewRequest
+from models import ChatRequest, ChainRequest, CodeReviewRequest, SafeReviewRequest, UnifiedResponse
 from chains import prompt_template, get_review_chain, review_chat_prompt, parser
 from agent_graph import get_agent_graph
 from agent_api import register_agent_routes
 from prompts import REVIEW_SYSTEM_PROMPT
+
+from models import CodeGenResult,CodeGenRequest
+from chains import get_code_gen_chain
 
 # 日志配置
 logging.basicConfig(
@@ -159,6 +162,35 @@ async def global_exception_handler(request, exc: Exception):
         }
     )
 
+# =====================================================
+# 5.8 周四：代码生成 Chain 集成
+# =====================================================
+
+# 构建代码生成链
+# 功能说明：将用户用自然语言描述的编程需求，
+# 交给 LLM 生成对应语言的代码，并以结构化 JSON 返回。
+code_gen_chain = get_code_gen_chain(llm)
+
+@app.post("/code_gen")
+async def generate_code(request:CodeGenRequest):
+    """根据需求生成代码"""
+    # 将用户输入注入链中，触发 LLM 生成代码
+    result = await code_gen_chain.ainvoke({"user_input": request.user_input})
+
+    # 将结构化结果包装在统一响应中返回
+    return UnifiedResponse(
+        success=True,
+        code=200,
+        message="代码生成成功",
+        data=result.model_dump()
+    ).model_dump()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=10000)
+
+
+# {
+#   "user_input": "写一个 Unity 脚本，让摄像机跟随玩家角色，平滑移动"
+# }
