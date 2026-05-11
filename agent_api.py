@@ -271,11 +271,11 @@ def register_agent_routes(app, llm, agent_graph, review_chain, review_chat_promp
         history = get_session_history(request.session_id)
         
         # 只有在「全新会话」且「不包含代码关键词」时才拦截
-        if not history and not is_code_review_intent(request.input):
-            return UnifiedResponse(
-                success=True, code=200, message="非代码请求已拦截",
-                data={"output": "请提供与 Unity C# 代码审查相关的问题。"}
-            ).model_dump()
+        # if not history and not is_code_review_intent(request.input):
+        #     return UnifiedResponse(
+        #         success=True, code=200, message="非代码请求已拦截",
+        #         data={"output": "请提供与 Unity C# 代码审查相关的问题。"}
+        #     ).model_dump()
 
         # 构建消息列表
         messages = [SystemMessage(content=REVIEW_SYSTEM_PROMPT)]
@@ -355,9 +355,9 @@ def register_agent_routes(app, llm, agent_graph, review_chain, review_chat_promp
 
         async def stream_events():
             # 拦截逻辑移到生成器内部，此处可以用 return（因为生成器内 return 表示结束生成）
-            if not history and not is_code_review_intent(request.input):
-                yield f"data: {json.dumps({'type': 'error', 'content': '请提供与 Unity C# 代码审查相关的问题。'})}\n\n"
-                return  # 生成器结束
+            # if not history and not is_code_review_intent(request.input):
+            #     yield f"data: {json.dumps({'type': 'error', 'content': '请提供与 Unity C# 代码审查相关的问题。'})}\n\n"
+            #     return  # 生成器结束
             
             full_response = ""
             try:

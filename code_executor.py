@@ -58,18 +58,39 @@ def execute_python_code(code: str) -> str:
     - 代码执行超时时间为 5 秒
     - 返回的内容是 print() 输出的结果
     """
+    import signal
+
     # 捕获 stdout
     old_stdout = sys.stdout
     sys.stdout = io.StringIO()
 
+    # 超时处理函数
+    def timeout_handler(signum,frame):
+        raise TimeoutError("代码执行超时（超过5秒）")
+
     try:
+        # 设置 5 秒超时（Windows 上 signal 不可用，直接用 try/except 兜底）
+        signal.signal(signal.SIGALRM,timeout_handler)
+        signal.alarm(5)
+
+
         # 在受限的全局空间执行代码
         exec(code, SAFE_GLOBALS, {})
         output = sys.stdout.getvalue()
+
+        # 取消超时
+        signal.alarm(0)
+
+        # 输出长度限制：最多 2000 字符
+        if len(output) > 2000:
+            output = output[:2000] + "\n...（输出过长，已截断）"
+
         if output.strip():
             return output.strip()
         else:
             return "代码执行成功，但没有输出内容（可能是没有 print 语句）"
+    except TimeoutError:
+        return "代码执行超时（超过 5 秒），已自动终止。请检查代码是否有死循环或计算量过大。"
     except Exception as e:
         return f"代码执行错误: {type(e).__name__}: {str(e)}"
     finally:
