@@ -4,176 +4,1023 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unity C# 代码审查 Agent</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-        #chat-box { border: 1px solid #ccc; height: 400px; overflow-y: auto; padding: 10px; margin-bottom: 20px; background: #f9f9f9; }
-        .msg { margin: 8px 0; padding: 8px 12px; border-radius: 8px; max-width: 80%; }
-        .user-msg { background: #007bff; color: white; margin-left: auto; text-align: right; }
-        .ai-msg { background: #e9ecef; color: black; margin-right: auto; }
-        .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        input { padding: 8px; font-size: 14px; }
-        #session-input { width: 150px; }
-        #message-input { flex: 1; }
-        button { padding: 8px 16px; cursor: pointer; }
-    </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- 新增：highlight.js 核心库（预编译版，含常见语言支持） -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
-    <!-- 新增：主题样式（GitHub 风格） -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/font-awesome@6.5.1/js/all.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary-color: #8b5cf6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #475569;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 2px solid transparent;
+        }
+
+        .tab-btn:hover {
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        textarea {
+            min-height: 200px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .result-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .review-result {
+            background: var(--bg-dark);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .result-header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .result-badge.problem {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error-color);
+        }
+
+        .result-badge.no-problem {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success-color);
+        }
+
+        .result-content {
+            padding: 20px;
+        }
+
+        .issue-list, .suggestion-list {
+            list-style: none;
+        }
+
+        .issue-list li, .suggestion-list li {
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 32px;
+        }
+
+        .issue-list li::before {
+            content: '⚠️';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .suggestion-list li::before {
+            content: '💡';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .code-block {
+            background: #0d1117;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+
+        .code-header {
+            padding: 10px 16px;
+            background: var(--bg-input);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-language {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        pre {
+            margin: 0;
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 14px;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 300px);
+            min-height: 500px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 80%;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+        }
+
+        .message-content {
+            padding: 14px 18px;
+            border-radius: 18px;
+            word-break: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-bottom-right-radius: 6px;
+        }
+
+        .message.assistant .message-content {
+            background: var(--bg-input);
+            border-bottom-left-radius: 6px;
+        }
+
+        .message-content code {
+            background: rgba(99, 102, 241, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .message-content pre {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input-row input[type="text"] {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-control {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .session-control input {
+            max-width: 200px;
+        }
+
+        .system-message {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid var(--primary-color);
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            color: var(--error-color);
+            margin-bottom: 16px;
+        }
+
+        .success-message {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            color: var(--success-color);
+            margin-bottom: 16px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-input);
+            padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab-btn {
+                width: 100%;
+            }
+
+            .message {
+                max-width: 95%;
+            }
+
+            .chat-input-row {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Unity C# 代码审查 Agent</h1>
-    
-    <div id="chat-box"></div>
-    
-    <div class="input-row">
-        <input id="session-input" type="text" placeholder="Session ID" value="test001">
-        <input id="message-input" type="text" placeholder="输入代码或问题..." onkeypress="if(event.key==='Enter') sendMessage()">
-        <button onclick="sendMessage()">发送</button>
-        <button onclick="loadHistory()">加载历史</button>
-        <button onclick="sendStreamMessage()">流式发送</button>
+    <div class="app-container">
+        <header>
+            <h1><i class="fas fa-code-branch"></i> Unity C# 代码审查 Agent</h1>
+            <p>智能代码审查与生成助手</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('chat')">
+                <i class="fas fa-comments"></i> 对话模式
+            </button>
+            <button class="tab-btn" onclick="switchTab('review')">
+                <i class="fas fa-search"></i> 代码审查
+            </button>
+            <button class="tab-btn" onclick="switchTab('generate')">
+                <i class="fas fa-code"></i> 代码生成
+            </button>
+        </div>
+
+        <div id="chat-tab" class="tab-content active">
+            <div class="card chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="system-message">
+                        <i class="fas fa-info-circle"></i>
+                        欢迎使用 Unity C# 代码审查 Agent！请输入您的代码或问题。
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <div class="session-control">
+                        <input type="text" id="session-id" placeholder="Session ID" value="default">
+                        <button class="btn btn-secondary" onclick="loadChatHistory()">
+                            <i class="fas fa-history"></i> 加载历史
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearChatHistory()">
+                            <i class="fas fa-trash"></i> 清除历史
+                        </button>
+                    </div>
+                    <div class="chat-input-row">
+                        <input type="text" id="chat-input" placeholder="输入代码或问题..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                        <button class="btn btn-primary" onclick="sendChatMessage()" id="send-btn">
+                            <i class="fas fa-paper-plane"></i> 发送
+                        </button>
+                        <button class="btn btn-secondary" onclick="sendStreamChatMessage()">
+                            <i class="fas fa-spinner"></i> 流式
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="review-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-search"></i> 代码审查
+                    </h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">输入 Unity C# 代码</label>
+                    <textarea id="review-code" placeholder="粘贴您的 Unity C# 代码..."></textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="submitReview()" id="review-btn">
+                        <i class="fas fa-search"></i> 开始审查
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearReviewCode()">
+                        <i class="fas fa-eraser"></i> 清空
+                    </button>
+                </div>
+
+                <div id="review-result" class="result-section" style="display: none;">
+                    <h3 class="result-title">审查结果</h3>
+                    <div class="review-result" id="review-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="generate-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-code"></i> 代码生成
+                    </h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">描述您的需求</label>
+                    <textarea id="gen-prompt" placeholder="用自然语言描述您需要的代码...&#10;例如：写一个 Unity 脚本，让物体在 Start 时随机改变颜色"></textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="submitCodeGen()" id="gen-btn">
+                        <i class="fas fa-magic"></i> 生成代码
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearGenPrompt()">
+                        <i class="fas fa-eraser"></i> 清空
+                    </button>
+                </div>
+
+                <div id="gen-result" class="result-section" style="display: none;">
+                    <h3 class="result-title">生成结果</h3>
+                    <div id="gen-content"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         const API_BASE = "https://unity-code-review-agent-production.up.railway.app";
+        let copiedTimeout = null;
 
-        function addMessage(role, text) {
-            const box = document.getElementById("chat-box");
-            const div = document.createElement("div");
-            div.className = "msg " + (role === "user" ? "user-msg" : "ai-msg");
-            if (role === "ai") {
-                div.innerHTML = marked.parse(text);
-                div.querySelectorAll('pre code').forEach((block) => {
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        function addChatMessage(role, content) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            if (role === 'assistant') {
+                contentDiv.innerHTML = marked.parse(content);
+                contentDiv.querySelectorAll('pre code').forEach(block => {
                     hljs.highlightElement(block);
                 });
             } else {
-                div.textContent = text;  // 用户消息保持纯文本，防 XSS
+                contentDiv.textContent = content;
             }
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
+
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        async function sendMessage() {
-            const sessionId = document.getElementById("session-input").value;
-            const message = document.getElementById("message-input").value;
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const sessionId = document.getElementById('session-id').value;
+            const message = input.value.trim();
+
             if (!message) return;
 
-            addMessage("user", message);
-            document.getElementById("message-input").value = "";
+            addChatMessage('user', message);
+            input.value = '';
+
+            const sendBtn = document.getElementById('send-btn');
+            const originalText = sendBtn.innerHTML;
+            sendBtn.innerHTML = '<span class="loading-spinner"></span> 发送中';
+            sendBtn.disabled = true;
 
             try {
                 const res = await fetch(`${API_BASE}/agent/memory`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ input: message, session_id: sessionId })
                 });
+
                 const data = await res.json();
+
                 if (data.success && data.data) {
-                    addMessage("ai", data.data.output);
+                    addChatMessage('assistant', data.data.output);
                 } else {
-                    addMessage("ai", "错误: " + (data.message || "未知错误"));
+                    addChatMessage('assistant', `❌ 错误: ${data.message || '未知错误'}`);
                 }
             } catch (err) {
-                addMessage("ai", "网络错误: " + err.message);
+                addChatMessage('assistant', `❌ 网络错误: ${err.message}`);
+            } finally {
+                sendBtn.innerHTML = originalText;
+                sendBtn.disabled = false;
             }
         }
 
-        async function loadHistory() {
-            const sessionId = document.getElementById("session-input").value;
-            const box = document.getElementById("chat-box");
-            box.innerHTML = "";
+        async function sendStreamChatMessage() {
+            const input = document.getElementById('chat-input');
+            const sessionId = document.getElementById('session-id').value;
+            const message = input.value.trim();
 
-            try {
-                const res = await fetch(`${API_BASE}/agent/memory/history?session_id=${sessionId}`);
-                const data = await res.json();
-                if (data.success && data.data && data.data.history) {
-                    data.data.history.forEach(msg => {
-                        const role = msg.type === "HumanMessage" ? "user" : "ai";
-                        addMessage(role, msg.content);
-                    });
-                } else {
-                    addMessage("ai", "暂无历史记录");
-                }
-            } catch (err) {
-                addMessage("ai", "网络错误: " + err.message);
-            }
-        }
-
-        async function sendStreamMessage() {
-            const sessionId = document.getElementById("session-input").value;
-            const message = document.getElementById("message-input").value;
             if (!message) return;
 
-            addMessage("user", message);
-            document.getElementById("message-input").value = "";
+            addChatMessage('user', message);
+            input.value = '';
 
-            // 创建一条 AI 消息气泡，初始显示占位文字
-            const box = document.getElementById("chat-box");
-            const div = document.createElement("div");
-            div.className = "msg ai-msg";
-            div.id = "streaming-msg";
-            div.textContent = "🤔 思考中...";
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = '🤔 思考中...';
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
 
-            // 用来标记是否已经用真正的文本替换过占位符
             let firstText = true;
+            let fullContent = '';
 
             try {
                 const res = await fetch(`${API_BASE}/agent/memory/stream`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ input: message, session_id: sessionId })
                 });
 
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
-                let buffer = "";
+                let buffer = '';
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
 
                     buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split("\n\n");
-                    buffer = lines.pop() || "";
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop() || '';
 
                     for (const line of lines) {
-                        if (line.startsWith("data: ")) {
-                            const data = JSON.parse(line.slice(6));  // ✅ data 在这里定义
+                        if (line.startsWith('data: ')) {
+                            const data = JSON.parse(line.slice(6));
 
-                            if (data.type === "text") {
+                            if (data.type === 'text') {
                                 if (firstText) {
-                                    div.textContent = data.content;   // 替换占位符
+                                    contentDiv.textContent = data.content;
                                     firstText = false;
                                 } else {
-                                    div.textContent += data.content;
+                                    contentDiv.textContent += data.content;
                                 }
-                            } else if (data.type === "tool_start") {
-                                div.textContent += "\n🔧 " + data.content;
-                            } else if (data.type === "tool_end") {
-                                div.textContent += "\n✅ " + data.content;
-                            } else if (data.type === "done") {
-                                // 流结束，用 Markdown 渲染最终结果
-                                div.innerHTML = marked.parse(data.content);
-                                div.querySelectorAll('pre code').forEach((block) => {
+                                fullContent += data.content;
+                            } else if (data.type === 'tool_start') {
+                                contentDiv.textContent += `\n🔧 ${data.content}`;
+                            } else if (data.type === 'tool_end') {
+                                contentDiv.textContent += `\n✅ ${data.content}`;
+                            } else if (data.type === 'done') {
+                                contentDiv.innerHTML = marked.parse(data.content);
+                                contentDiv.querySelectorAll('pre code').forEach(block => {
                                     hljs.highlightElement(block);
                                 });
-                            } else if (data.type === "error") {
-                                div.textContent = "❌ " + data.content;
+                            } else if (data.type === 'error') {
+                                contentDiv.textContent = `❌ ${data.content}`;
                             }
-                            box.scrollTop = box.scrollHeight;
+
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         }
                     }
                 }
             } catch (err) {
-                div.textContent = "网络错误: " + err.message;
+                contentDiv.textContent = `❌ 网络错误: ${err.message}`;
             }
         }
 
+        async function loadChatHistory() {
+            const sessionId = document.getElementById('session-id').value;
+            const messagesContainer = document.getElementById('chat-messages');
 
-        // 全局配置 marked，每次解析 Markdown 时自动调用 highlight.js
+            try {
+                const res = await fetch(`${API_BASE}/agent/memory/history?session_id=${sessionId}`);
+                const data = await res.json();
+
+                messagesContainer.innerHTML = '';
+
+                if (data.success && data.data && data.data.history) {
+                    data.data.history.forEach(msg => {
+                        const role = msg.type === 'HumanMessage' ? 'user' : 'assistant';
+                        addChatMessage(role, msg.content);
+                    });
+                } else {
+                    const systemMsg = document.createElement('div');
+                    systemMsg.className = 'system-message';
+                    systemMsg.innerHTML = '<i class="fas fa-info-circle"></i> 暂无历史记录';
+                    messagesContainer.appendChild(systemMsg);
+                }
+            } catch (err) {
+                addChatMessage('assistant', `❌ 加载历史失败: ${err.message}`);
+            }
+        }
+
+        async function clearChatHistory() {
+            const sessionId = document.getElementById('session-id').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/agent/memory/history?session_id=${sessionId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('chat-messages').innerHTML = `
+                        <div class="system-message">
+                            <i class="fas fa-info-circle"></i> 历史记录已清除
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                addChatMessage('assistant', `❌ 清除失败: ${err.message}`);
+            }
+        }
+
+        async function submitReview() {
+            const code = document.getElementById('review-code').value.trim();
+            if (!code) {
+                alert('请输入代码');
+                return;
+            }
+
+            const btn = document.getElementById('review-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading-spinner"></span> 审查中';
+            btn.disabled = true;
+
+            const resultDiv = document.getElementById('review-result');
+            const contentDiv = document.getElementById('review-content');
+            resultDiv.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+
+                const data = await res.json();
+
+                contentDiv.innerHTML = `
+                    <div class="result-header">
+                        <span class="result-badge ${data.has_problem ? 'problem' : 'no-problem'}">
+                            ${data.has_problem ? '⚠️ 存在问题' : '✅ 代码良好'}
+                        </span>
+                    </div>
+                    <div class="result-content">
+                        ${data.issues && data.issues.length > 0 ? `
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="margin-bottom: 10px; color: var(--text-secondary);">发现的问题</h4>
+                                <ul class="issue-list">
+                                    ${data.issues.map(issue => `<li>${issue}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${data.suggestions && data.suggestions.length > 0 ? `
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="margin-bottom: 10px; color: var(--text-secondary);">优化建议</h4>
+                                <ul class="suggestion-list">
+                                    ${data.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${data.improved_code ? `
+                            <div>
+                                <h4 style="margin-bottom: 10px; color: var(--text-secondary);">优化后代码</h4>
+                                <div class="code-block">
+                                    <div class="code-header">
+                                        <span class="code-language">C#</span>
+                                        <button class="copy-btn" onclick="copyCode('${escape(data.improved_code)}')">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                    <pre><code class="language-csharp">${escapeHtml(data.improved_code)}</code></pre>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                contentDiv.querySelectorAll('pre code').forEach(block => {
+                    hljs.highlightElement(block);
+                });
+
+                resultDiv.style.display = 'block';
+            } catch (err) {
+                contentDiv.innerHTML = `<div class="error-message">❌ 审查失败: ${err.message}</div>`;
+                resultDiv.style.display = 'block';
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function clearReviewCode() {
+            document.getElementById('review-code').value = '';
+            document.getElementById('review-result').style.display = 'none';
+        }
+
+        async function submitCodeGen() {
+            const prompt = document.getElementById('gen-prompt').value.trim();
+            if (!prompt) {
+                alert('请输入需求描述');
+                return;
+            }
+
+            const btn = document.getElementById('gen-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading-spinner"></span> 生成中';
+            btn.disabled = true;
+
+            const resultDiv = document.getElementById('gen-result');
+            const contentDiv = document.getElementById('gen-content');
+            resultDiv.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/code_gen`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_input: prompt })
+                });
+
+                const data = await res.json();
+
+                if (data.success && data.data) {
+                    const genResult = data.data;
+                    contentDiv.innerHTML = `
+                        <div class="stats-row">
+                            <div class="stat-card">
+                                <div class="stat-value">${genResult.language.toUpperCase()}</div>
+                                <div class="stat-label">语言</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${genResult.code.split('\n').length}</div>
+                                <div class="stat-label">代码行数</div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px; color: var(--text-secondary);">需求描述</h4>
+                            <p style="background: var(--bg-input); padding: 12px; border-radius: 8px;">${genResult.requirement}</p>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px; color: var(--text-secondary);">生成代码</h4>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-language">${genResult.language}</span>
+                                    <button class="copy-btn" onclick="copyCode('${escape(genResult.code)}')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                                <pre><code class="language-${genResult.language}">${escapeHtml(genResult.code)}</code></pre>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="margin-bottom: 10px; color: var(--text-secondary);">代码解释</h4>
+                            <p style="line-height: 1.6;">${genResult.explanation}</p>
+                        </div>
+                    `;
+
+                    contentDiv.querySelectorAll('pre code').forEach(block => {
+                        hljs.highlightElement(block);
+                    });
+                } else {
+                    contentDiv.innerHTML = `<div class="error-message">❌ 生成失败: ${data.message || '未知错误'}</div>`;
+                }
+
+                resultDiv.style.display = 'block';
+            } catch (err) {
+                contentDiv.innerHTML = `<div class="error-message">❌ 生成失败: ${err.message}</div>`;
+                resultDiv.style.display = 'block';
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function clearGenPrompt() {
+            document.getElementById('gen-prompt').value = '';
+            document.getElementById('gen-result').style.display = 'none';
+        }
+
+        function copyCode(code) {
+            const decodedCode = unescape(code);
+            navigator.clipboard.writeText(decodedCode).then(() => {
+                const copyBtns = document.querySelectorAll('.copy-btn');
+                copyBtns.forEach(btn => {
+                    const icon = btn.querySelector('i');
+                    icon.className = 'fas fa-check';
+                });
+
+                if (copiedTimeout) clearTimeout(copiedTimeout);
+                copiedTimeout = setTimeout(() => {
+                    copyBtns.forEach(btn => {
+                        const icon = btn.querySelector('i');
+                        icon.className = 'fas fa-copy';
+                    });
+                }, 2000);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         marked.use({
             highlight: function(code, lang) {
                 const language = hljs.getLanguage(lang) ? lang : 'csharp';
@@ -182,9 +1029,7 @@
             langPrefix: 'hljs language-'
         });
 
-        // 确保页面中已渲染的代码块被高亮
         hljs.highlightAll();
-        
     </script>
 </body>
 </html>
