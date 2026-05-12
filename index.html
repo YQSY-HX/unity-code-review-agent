@@ -16,23 +16,23 @@
         }
 
         :root {
-            --primary-color: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary-color: #8b5cf6;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --bg-input: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --border-color: #475569;
-            --success-color: #22c55e;
+            --primary-color: #6b7280;
+            --primary-dark: #4b5563;
+            --secondary-color: #9ca3af;
+            --bg-dark: #f9fafb;
+            --bg-card: #ffffff;
+            --bg-input: #f3f4f6;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --border-color: #d1d5db;
+            --success-color: #10b981;
             --warning-color: #f59e0b;
             --error-color: #ef4444;
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a2e 100%);
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #f3f4f6 100%);
             min-height: 100vh;
             color: var(--text-primary);
         }
@@ -52,10 +52,7 @@
         header h1 {
             font-size: 2.5rem;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--text-primary);
             margin-bottom: 10px;
         }
 
@@ -97,7 +94,7 @@
         }
 
         .tab-btn.active {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: var(--primary-color);
             color: white;
             border-color: var(--primary-color);
         }
@@ -187,13 +184,14 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: var(--primary-color);
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+            background: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
         }
 
         .btn-primary:disabled {
@@ -310,10 +308,25 @@
         }
 
         .code-block {
-            background: #0d1117;
+            background: var(--bg-input);
             border-radius: 10px;
             overflow: hidden;
             margin-top: 16px;
+            border: none;
+            box-shadow: none;
+        }
+
+        .code-block pre {
+            background: var(--bg-input) !important;
+            border-radius: 0 0 10px 10px;
+            border: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+        }
+
+        .code-block pre code {
+            background: transparent !important;
+            padding: 0 !important;
         }
 
         .code-header {
@@ -396,7 +409,7 @@
         }
 
         .message.user .message-content {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: var(--primary-color);
             border-bottom-right-radius: 6px;
         }
 
@@ -413,11 +426,48 @@
         }
 
         .message-content pre {
-            background: #0d1117;
-            border-radius: 8px;
-            padding: 12px;
-            margin: 8px 0;
+            background: var(--bg-input) !important;
+            border-radius: 10px;
+            padding: 16px;
+            margin: 12px 0;
             overflow-x: auto;
+            border: none !important;
+            box-shadow: none !important;
+            position: relative;
+        }
+
+        .message-content pre code {
+            background: transparent !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        .copy-code-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            opacity: 0;
+        }
+
+        .message-content pre:hover .copy-code-btn,
+        .code-block:hover .copy-code-btn {
+            opacity: 1;
+        }
+
+        .copy-code-btn:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
         }
 
         .chat-input-area {
@@ -428,11 +478,28 @@
         .chat-input-row {
             display: flex;
             gap: 12px;
+            align-items: flex-end;
         }
 
-        .chat-input-row input[type="text"] {
+        .chat-input-row textarea {
             flex: 1;
             min-width: 0;
+            resize: none;
+            border-radius: 12px;
+        }
+
+        .chat-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100px;
+        }
+
+        .chat-actions .btn {
+            width: 100%;
+            justify-content: center;
+            padding: 14px 12px;
+            border-radius: 12px;
         }
 
         .session-control {
@@ -518,10 +585,19 @@
 
             .chat-input-row {
                 flex-direction: column;
+                align-items: stretch;
+            }
+
+            .chat-actions {
+                flex-direction: row;
+                width: 100%;
+            }
+
+            .chat-actions .btn {
+                flex: 1;
             }
 
             .btn {
-                width: 100%;
                 justify-content: center;
             }
         }
@@ -565,13 +641,15 @@
                         </button>
                     </div>
                     <div class="chat-input-row">
-                        <input type="text" id="chat-input" placeholder="输入代码或问题..." onkeypress="if(event.key==='Enter') sendChatMessage()">
-                        <button class="btn btn-primary" onclick="sendChatMessage()" id="send-btn">
-                            <i class="fas fa-paper-plane"></i> 发送
-                        </button>
-                        <button class="btn btn-secondary" onclick="sendStreamChatMessage()">
-                            <i class="fas fa-spinner"></i> 流式
-                        </button>
+                        <textarea id="chat-input" placeholder="输入代码或问题...&#10;Shift+Enter 换行，Enter 发送" rows="3"></textarea>
+                        <div class="chat-actions">
+                            <button class="btn btn-primary" onclick="sendChatMessage()" id="send-btn">
+                                <i class="fas fa-paper-plane"></i> 发送
+                            </button>
+                            <button class="btn btn-secondary" onclick="sendStreamChatMessage()">
+                                <i class="fas fa-spinner"></i> 流式
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -640,6 +718,22 @@
         const API_BASE = "https://unity-code-review-agent-production.up.railway.app";
         let copiedTimeout = null;
 
+        function handleChatKeydown(e) {
+            const input = document.getElementById('chat-input');
+            const activeTab = document.querySelector('.tab-content.active');
+
+            if (activeTab && activeTab.id === 'chat-tab' && input && document.activeElement === input) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendChatMessage();
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('keydown', handleChatKeydown);
+        });
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -661,6 +755,8 @@
                 contentDiv.querySelectorAll('pre code').forEach(block => {
                     hljs.highlightElement(block);
                 });
+
+                addCopyButtonsToCodeBlocks(contentDiv);
             } else {
                 contentDiv.textContent = content;
             }
@@ -668,6 +764,48 @@
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addCopyButtonsToCodeBlocks(container) {
+            container.querySelectorAll('pre').forEach(pre => {
+                if (!pre.querySelector('.copy-code-btn')) {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-code-btn';
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                    copyBtn.onclick = function() {
+                        copyCodeFromPre(pre);
+                    };
+                    pre.appendChild(copyBtn);
+                }
+            });
+        }
+
+        function copyCodeFromPre(preElement) {
+            const code = preElement.querySelector('code');
+            const codeText = code ? code.textContent : preElement.textContent;
+
+            const blob = new Blob([codeText], { type: 'text/plain' });
+            const clipboardItem = new ClipboardItem({ 'text/plain': blob });
+
+            navigator.clipboard.write([clipboardItem]).then(() => {
+                const btn = preElement.querySelector('.copy-code-btn');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                    }, 2000);
+                }
+            }).catch(err => {
+                navigator.clipboard.writeText(codeText).then(() => {
+                    const btn = preElement.querySelector('.copy-code-btn');
+                    if (btn) {
+                        btn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                        setTimeout(() => {
+                            btn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                        }, 2000);
+                    }
+                });
+            });
         }
 
         async function sendChatMessage() {
@@ -679,6 +817,11 @@
 
             addChatMessage('user', message);
             input.value = '';
+
+            document.removeEventListener('keydown', handleChatKeydown);
+            setTimeout(() => {
+                document.addEventListener('keydown', handleChatKeydown);
+            }, 0);
 
             const sendBtn = document.getElementById('send-btn');
             const originalText = sendBtn.innerHTML;
@@ -769,6 +912,7 @@
                                 contentDiv.querySelectorAll('pre code').forEach(block => {
                                     hljs.highlightElement(block);
                                 });
+                                addCopyButtonsToCodeBlocks(contentDiv);
                             } else if (data.type === 'error') {
                                 contentDiv.textContent = `❌ ${data.content}`;
                             }
@@ -998,7 +1142,9 @@
 
         function copyCode(code) {
             const decodedCode = unescape(code);
-            navigator.clipboard.writeText(decodedCode).then(() => {
+            const blob = new Blob([decodedCode], { type: 'text/plain' });
+            const clipboardItem = new ClipboardItem({ 'text/plain': blob });
+            navigator.clipboard.write([clipboardItem]).then(() => {
                 const copyBtns = document.querySelectorAll('.copy-btn');
                 copyBtns.forEach(btn => {
                     const icon = btn.querySelector('i');
@@ -1012,6 +1158,22 @@
                         icon.className = 'fas fa-copy';
                     });
                 }, 2000);
+            }).catch(err => {
+                navigator.clipboard.writeText(decodedCode).then(() => {
+                    const copyBtns = document.querySelectorAll('.copy-btn');
+                    copyBtns.forEach(btn => {
+                        const icon = btn.querySelector('i');
+                        icon.className = 'fas fa-check';
+                    });
+
+                    if (copiedTimeout) clearTimeout(copiedTimeout);
+                    copiedTimeout = setTimeout(() => {
+                        copyBtns.forEach(btn => {
+                            const icon = btn.querySelector('i');
+                            icon.className = 'fas fa-copy';
+                        });
+                    }, 2000);
+                });
             });
         }
 
