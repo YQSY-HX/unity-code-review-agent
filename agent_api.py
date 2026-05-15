@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessage
 # 导入基础提示词
 from prompts import REVIEW_SYSTEM_PROMPT
 from chains import review_chat_prompt
+from prompts import REVIEW_SYSTEM_PROMPT, MULTI_AGENT_SYSTEM_PROMPT
 
 
 from models import (
@@ -387,3 +388,26 @@ def register_agent_routes(app, llm, agent_graph, review_chain, review_chat_promp
                     add_message_to_session(request.session_id, AIMessage(content=full_response))
 
         return StreamingResponse(stream_events(), media_type="text/event-stream")
+
+
+    # =====================================================
+    # 5.15 周五：多工具 Agent 接口
+    # =====================================================
+    @app.post("/agent/multi")
+    async def multi_agent(request:AgentMemoryRequest):
+        """多工具协同 Agent 接口——自动选择工具完成复杂任务"""
+        history=get_session_history(request.session_id)
+
+        messages=[SystemMessage(content=MULTI_AGENT_SYSTEM_PROMPT)]
+        messages.extend(history)
+        messages.append(HumanMessage(content=request.input))
+
+        result=await agent_graph.ainvoke({"messages":messages})
+
+        add_message_to_session(request.session_id,HumanMessage(content=request.input))
+        add_message_to_session(request.session_id,result["messages"][-1])
+
+        return UnifiedResponse(
+            success=True ,coed=200 ,message='ok',
+            data={"output": result["messages"][-1].content}
+        ).model_dump()
